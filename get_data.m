@@ -1,5 +1,4 @@
 function [XX] = get_data(fname)
-%p_id,vowel)
 
 load (fname);
 [i,j] = size(datastart);
