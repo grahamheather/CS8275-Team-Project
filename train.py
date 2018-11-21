@@ -39,8 +39,6 @@ def train(file_name, variable_name):
 
 		# train classifier
 		classifier = SVC(gamma='scale')
-		print(iter_data.shape)
-		print(iter_classes.shape)
 		classifier.fit(iter_data, iter_classes.ravel())
 		predicted_classes = classifier.predict(test_data)
 
@@ -61,6 +59,6 @@ def train(file_name, variable_name):
 
 #metrics, avg_metrics = train('all_features', 'feature_data')
 #metrics, avg_metrics = train('featuresV1.mat', 'feature_data')
-metrics, avg_metrics = train('featuresV1-1.mat', 'feature_data')
+metrics, avg_metrics = train('featuresV1-2.mat', 'feature_data')
 print(metrics)
 print(avg_metrics)
