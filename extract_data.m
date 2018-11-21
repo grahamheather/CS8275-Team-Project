@@ -18,4 +18,4 @@ for k = 1:l_vowels
      end
 end
 
-save('all_data', 'D', 'vowels', 'patients')
+save('all_data_matlab', 'D', 'vowels', 'patients', '-v7')
