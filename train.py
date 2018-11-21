@@ -3,15 +3,17 @@ import numpy as np
 from sklearn.svm import SVC
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 from collections import defaultdict
+import h5py
 
 def train(file_name, variable_name):
 	classes = np.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0])
 
-	feature_data = scipy.io.loadmat(file_name)[variable_name]
+	data_file = h5py.File(file_name, 'r')
+	feature_data = data_file[variable_name]
 
-	num_patients = feature_data.shape[0]
-	num_vowels = feature_data.shape[1]
-	num_features = feature_data[0, 0].shape[1]
+	num_patients = feature_data.shape[1]
+	num_vowels = feature_data.shape[0]
+	num_features = data_file[feature_data[0, 0]].shape[0]
 
 	# final metrics
 	metrics = defaultdict(list)
@@ -29,14 +31,16 @@ def train(file_name, variable_name):
 		for i in range(num_patients):
 			for vowel in range(num_vowels):
 				if not i == left_out:
-					iter_data = np.concatenate((iter_data, feature_data[i, vowel]))
-					iter_classes = np.concatenate((iter_classes, np.full((feature_data[i, vowel].shape[0], 1), classes[i])))
+					iter_data = np.concatenate((iter_data, np.transpose(data_file[feature_data[vowel, i]])))
+					iter_classes = np.concatenate((iter_classes, np.full((data_file[feature_data[vowel, i]].shape[1], 1), classes[i])))
 				else:
-					test_data = np.concatenate((test_data, feature_data[i, vowel]))
-					test_classes = np.concatenate((test_classes, np.full((feature_data[i, vowel].shape[0], 1), classes[i])))
+					test_data = np.concatenate((test_data, np.transpose(data_file[feature_data[vowel, i]])))
+					test_classes = np.concatenate((test_classes, np.full((data_file[feature_data[vowel, i]].shape[1], 1), classes[i])))
 
 		# train classifier
 		classifier = SVC(gamma='scale')
+		print(iter_data.shape)
+		print(iter_classes.shape)
 		classifier.fit(iter_data, iter_classes.ravel())
 		predicted_classes = classifier.predict(test_data)
 
@@ -55,6 +59,8 @@ def train(file_name, variable_name):
 
 	return (metrics, avg_metrics)
 
-metrics, avg_metrics = train('all_features', 'feature_data')
+#metrics, avg_metrics = train('all_features', 'feature_data')
+#metrics, avg_metrics = train('featuresV1.mat', 'feature_data')
+metrics, avg_metrics = train('featuresV1-1.mat', 'feature_data')
 print(metrics)
 print(avg_metrics)
