@@ -1,9 +1,11 @@
 import scipy.io
 import numpy as np
 from sklearn.svm import SVC
+from sklearn.neural_network import MLPClassifier
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 from collections import defaultdict
 import h5py
+from imblearn.over_sampling import SMOTE
 
 def train(file_name, variable_name):
 	classes = np.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0])
@@ -37,9 +39,16 @@ def train(file_name, variable_name):
 					test_data = np.concatenate((test_data, np.transpose(data_file[feature_data[vowel, i]])))
 					test_classes = np.concatenate((test_classes, np.full((data_file[feature_data[vowel, i]].shape[1], 1), classes[i])))
 
+		X = iter_data
+		y = iter_classes.ravel()
+
+		# SMOTE
+		rebalancing = SMOTE()
+		X_res, y_res = rebalancing.fit_resample(X, y)
+
 		# train classifier
 		classifier = SVC(gamma='scale')
-		classifier.fit(iter_data, iter_classes.ravel())
+		classifier.fit(X_res, y_res)
 		predicted_classes = classifier.predict(test_data)
 
 		# evaluate metrics
