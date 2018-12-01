@@ -39,71 +39,70 @@ def train(file_name, variable_name):
 	avg_metrics = defaultdict(int)
 
 
-	excluded = 0
+	num_trials = 0
 	# leave one out cross-validation
 	for left_out in range(num_patients):
+		print("PROGRESS", left_out)
 		if not left_out in to_exclude or to_exclude[left_out] != 'all':
-			print("PROGRESS", left_out)
+			for vowel in range(num_vowels):
+				if left_out not in to_exclude or vowel not in to_exclude[left_out]:
+					iter_data = np.array([]).reshape(0, num_features)
+					test_data = np.array([]).reshape(0, num_features)
+					iter_classes = np.array([]).reshape(0, 1)
+					test_classes = np.array([]).reshape(0, 1)
 
-			iter_data = np.array([]).reshape(0, num_features)
-			test_data = np.array([]).reshape(0, num_features)
-			iter_classes = np.array([]).reshape(0, 1)
-			test_classes = np.array([]).reshape(0, 1)
+					for i in range(num_patients):
+						if i not in to_exclude or to_exclude[i] != 'all':
+							if i not in to_exclude or vowel not in to_exclude[i] or to_exclude[i][vowel] != 'all':
+								if i in to_exclude and vowel in to_exclude[i]:
+									to_remove = to_exclude[i][vowel]
+								else:
+									to_remove = []
 
-			for i in range(num_patients):
-				if i not in to_exclude or to_exclude[i] != 'all':
-					for vowel in range(num_vowels):
-						if i not in to_exclude or vowel not in to_exclude[i] or to_exclude[i][vowel] != 'all':
-							if i in to_exclude and vowel in to_exclude[i]:
-								to_remove = to_exclude[i][vowel]
-							else:
-								to_remove = []
+								current_data = np.delete(np.transpose(data_file[feature_data[vowel, i]]), to_remove, axis=0)
+								current_classes = np.delete(np.full((data_file[feature_data[vowel, i]].shape[1], 1), classes[i]), to_remove, axis=0)
+								if not i == left_out:
+									iter_data = np.concatenate((iter_data, current_data))
+									iter_classes = np.concatenate((iter_classes, current_classes))
+								else:
+									test_data = np.concatenate((test_data, current_data))
+									test_classes = np.concatenate((test_classes, current_classes))
 
-							current_data = np.delete(np.transpose(data_file[feature_data[vowel, i]]), to_remove, axis=0)
-							current_classes = np.delete(np.full((data_file[feature_data[vowel, i]].shape[1], 1), classes[i]), to_remove, axis=0)
-							if not i == left_out:
-								iter_data = np.concatenate((iter_data, current_data))
-								iter_classes = np.concatenate((iter_classes, current_classes))
-							else:
-								test_data = np.concatenate((test_data, current_data))
-								test_classes = np.concatenate((test_classes, current_classes))
+					# remove infinite values (from dividing by 0)
+					iter_data[~np.isfinite(iter_data)] = 0
+					test_data[~np.isfinite(test_data)] = 0
+					
+					X = iter_data
+					y = iter_classes.ravel()
 
-			# remove infinite values (from dividing by 0)
-			iter_data[~np.isfinite(iter_data)] = 0
-			test_data[~np.isfinite(test_data)] = 0
-			
-			X = iter_data
-			y = iter_classes.ravel()
+					# SMOTE
+					rebalancing = SMOTE()
+					#print(X.shape)
+					#print(y.shape)
+					#print(y)
+					X_res, y_res = rebalancing.fit_resample(X, y)
 
-			# SMOTE
-			rebalancing = SMOTE()
-			#print(X.shape)
-			#print(y.shape)
-			#print(y)
-			X_res, y_res = rebalancing.fit_resample(X, y)
+					# train classifier
+					classifier = SVC(gamma='scale')
+					classifier.fit(X_res, y_res)
+					predicted_classes = classifier.predict(test_data)
 
-			# train classifier
-			classifier = SVC(gamma='scale')
-			classifier.fit(X_res, y_res)
-			predicted_classes = classifier.predict(test_data)
-
-			# evaluate metrics
-			precision = precision_score(test_classes, predicted_classes)
-			recall = recall_score(test_classes, predicted_classes)
-			accuracy = accuracy_score(test_classes, predicted_classes)
-			
-			# store metrics
-			metrics['precision'].append(precision)
-			metrics['recall'].append(recall)
-			metrics['accuracy'].append(accuracy)
-			avg_metrics['precision'] += precision / num_patients
-			avg_metrics['recall'] += recall / num_patients
-			avg_metrics['accuracy'] += accuracy / num_patients
-		else:
-			excluded = excluded + 1
+					# evaluate metrics
+					precision = precision_score(test_classes, predicted_classes)
+					recall = recall_score(test_classes, predicted_classes)
+					accuracy = accuracy_score(test_classes, predicted_classes)
+					
+					# store metrics
+					metrics['precision'].append(precision)
+					metrics['recall'].append(recall)
+					metrics['accuracy'].append(accuracy)
+					avg_metrics['precision'] += precision
+					avg_metrics['recall'] += recall
+					avg_metrics['accuracy'] += accuracy
+					num_trials = num_trials + 1
 
 	for metric in avg_metrics:
-		avg_metrics[metric] = avg_metrics[metric] * num_patients / (num_patients - excluded)
+		avg_metrics[metric] = avg_metrics[metric] / num_trials
 
 	return (metrics, avg_metrics)
 
