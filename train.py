@@ -39,7 +39,9 @@ def train(file_name, variable_name):
 	avg_metrics = defaultdict(int)
 
 
-	excluded = 0
+	num_trials = 0
+	num_pos_trials = 0
+	
 	# leave one out cross-validation
 	for left_out in range(num_patients):
 		if not left_out in to_exclude or to_exclude[left_out] != 'all':
@@ -77,9 +79,6 @@ def train(file_name, variable_name):
 
 			# SMOTE
 			rebalancing = SMOTE()
-			#print(X.shape)
-			#print(y.shape)
-			#print(y)
 			X_res, y_res = rebalancing.fit_resample(X, y)
 
 			# train classifier
@@ -96,14 +95,16 @@ def train(file_name, variable_name):
 			metrics['precision'].append(precision)
 			metrics['recall'].append(recall)
 			metrics['accuracy'].append(accuracy)
-			avg_metrics['precision'] += precision / num_patients
-			avg_metrics['recall'] += recall / num_patients
-			avg_metrics['accuracy'] += accuracy / num_patients
-		else:
-			excluded = excluded + 1
+			avg_metrics['precision'] += precision
+			avg_metrics['recall'] += recall
+			avg_metrics['accuracy'] += accuracy
 
-	for metric in avg_metrics:
-		avg_metrics[metric] = avg_metrics[metric] * num_patients / (num_patients - excluded)
+			num_trials = num_trials + 1
+			num_pos_trials = num_pos_trials + classes[left_out]
+
+	avg_metrics['precision'] /= num_pos_trials
+	avg_metrics['recall'] /= num_pos_trials
+	avg_metrics['accuracy'] /= num_trials
 
 	return (metrics, avg_metrics)
 
