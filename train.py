@@ -40,6 +40,7 @@ def train(file_name, variable_name):
 
 
 	num_trials = 0
+	num_pos_trials = 0
 	# leave one out cross-validation
 	for left_out in range(num_patients):
 		print("PROGRESS", left_out)
@@ -100,9 +101,11 @@ def train(file_name, variable_name):
 					avg_metrics['recall'] += recall
 					avg_metrics['accuracy'] += accuracy
 					num_trials = num_trials + 1
+					num_pos_trials = num_pos_trials + classes[left_out]
 
-	for metric in avg_metrics:
-		avg_metrics[metric] = avg_metrics[metric] / num_trials
+	avg_metrics['precision'] /= num_pos_trials
+	avg_metrics['recall'] /= num_pos_trials
+	avg_metrics['accuracy'] /= num_trials
 
 	return (metrics, avg_metrics)
 
