@@ -9,6 +9,11 @@ features = {
   @(channel, ss, si) mav(channel),
   @(channel, ss, si) rms(channel),
   @(channel, ss, si) zero_crossings(channel),
+  @(channel, ss, si) mean_dwt(channel, 1),
+  @(channel, ss, si) mean_dwt(channel, 2),
+  @(channel, ss, si) mean_dwt(channel, 3),
+  @(channel, ss, si) dwt_energy(channel, 1),
+  @(channel, ss, si) dwt_energy(channel, 2)
   };
 
 features_all('featuresV2.mat', all_data, features, skin_supra, skin_infra);
@@ -35,6 +40,7 @@ function features_all(filename, data, features, skin_supra, skin_infra)
   % extract the features
   feature_data = cell(num_patients, num_vowels);
   for patient = 1:num_patients
+    disp(patient)
     for vowel = 1:num_vowels
       size_cell = size(data.D{patient, vowel});
       num_samples = size_cell(1);
@@ -70,4 +76,49 @@ end
 
 function out = rms(channel)
   out = sqrt(mean((channel) .^ 2));
+end
+
+function out = get_dwt(channel)
+   
+    dwtmode('per','nodisplay');
+    wname = 'db10';
+    level = fix(log2(length(channel)));
+    level = level - floor(level/2);
+    [C,L] = wavedec(channel,level,wname);
+    out = detcoef(C,L,1:level); % wc 
+    
+end
+
+
+function out = mean_dwt(channel, index)
+    wc = get_dwt(channel);
+
+    for i = 1:length(wc)
+        sum_ = sum(wc{i});
+        mean_{i} = sum_/ length(wc{i});
+    end
+    
+    mean_ = cell2mat(mean_);
+    max_val = max(mean_);
+    min_val = min(mean_);
+    mean_val = mean(mean_);
+    
+    out_values = [max_val,min_val,mean_val];
+    out = out_values(index);
+end
+
+
+function out = dwt_energy(channel, index)
+    wc = get_dwt(channel);
+
+    for i=1:length(wc)
+     signal_Pow = wc{i}.^2;  % Compute the second power of signal points
+     total_energy = sum(signal_Pow);
+     dwtEnergy{i} = total_energy;
+    end
+    max_ = max(cell2mat(dwtEnergy));
+    mean_energy = mean(cell2mat(dwtEnergy));
+
+    out_values = [ max_ , mean_energy];
+    out = out_values(index);
 end
