@@ -1,4 +1,4 @@
-all_data = load("all_data_matlab.mat");
+%all_data = load("all_data_matlab.mat");
 
 skin_supra = [4 5.3 4.3 5.6 4 3.8 4 3.2 4 4.5 4 3.5 5 5.6 5.2 4 5 4.8 4.2 7.3 5 7.3 4.2 4.8 2.2 5.6 6.83 5.8 4.67 3.67 5.25 3.67 5.83 6.67 4.17 5 5 4.6 8.8 6.83 7.166 7.66 4.667 7.3 6 7.33 8.16 7.6 7 14.3 4.3 11 4.17 6.67 8 4.17 2.83];
 skin_infra = [4.5 5.6 2.6 6.6 4.3 3.8 2.6 3.8 3.3 5 3 3 4.5 5 4.8 3.5 4 3.2 3 8 4.7 6.3 3.2 3.2 1 6 6.83 6.83 3.83 3.5 5.25 3.16 6.3 6.17 5.17 5.3 5.33 3.6 7 4.3 6 4 4.333 7.6 7 4.83 5.16 5.3 5 11.3 5.3 13 2.8 5 9 2.67 2.5];
@@ -9,14 +9,12 @@ features = {
   @(channel, ss, si) mav(channel),
   @(channel, ss, si) rms(channel),
   @(channel, ss, si) zero_crossings(channel),
-  @(channel, ss, si) mean_dwt(channel, 1),
-  @(channel, ss, si) mean_dwt(channel, 2),
-  @(channel, ss, si) mean_dwt(channel, 3),
-  @(channel, ss, si) dwt_energy(channel, 1),
-  @(channel, ss, si) dwt_energy(channel, 2)
+  @(channel, ss, si) ssc_peaks(channel),
+  @(channel, ss, si) ssc_valleys(channel),
+  @(channel, ss, si) willison_amp(channel)
   };
 
-features_all('featuresV2.mat', all_data, features, skin_supra, skin_infra);
+features_all('featuresV5.mat', all_data, features, skin_supra, skin_infra);
 
 function features_all(filename, data, features, skin_supra, skin_infra) 
   size_patients = size(data.patients);
@@ -78,47 +76,29 @@ function out = rms(channel)
   out = sqrt(mean((channel) .^ 2));
 end
 
-function out = get_dwt(channel)
-   
-    dwtmode('per','nodisplay');
-    wname = 'db10';
-    level = fix(log2(length(channel)));
-    level = level - floor(level/2);
-    [C,L] = wavedec(channel,level,wname);
-    out = detcoef(C,L,1:level); % wc 
-    
+function out = ssc_peaks(channel)
+    dx = diff(channel);
+    dx = [0 dx];          %shifting because diff has one less element
+    dx1 = [dx(2:end) 0];  %shifting dx for 1 element
+
+    out = size(find( dx>0 & dx1<0), 2);  %compare dx and dx1 to find peaks
 end
 
+function out = ssc_valleys(channel)
+    dx = diff(channel);
+    dx = [0 dx];          %shifting because diff has one less element
+    dx1 = [dx(2:end) 0];  %shifting dx for 1 element
 
-function out = mean_dwt(channel, index)
-    wc = get_dwt(channel);
-
-    for i = 1:length(wc)
-        sum_ = sum(wc{i});
-        mean_{i} = sum_/ length(wc{i});
-    end
-    
-    mean_ = cell2mat(mean_);
-    max_val = max(mean_);
-    min_val = min(mean_);
-    mean_val = mean(mean_);
-    
-    out_values = [max_val,min_val,mean_val];
-    out = out_values(index);
+    out = size(find( dx<0 & dx1>0), 2);  %compare dx and dx1 to find valleys
 end
 
-
-function out = dwt_energy(channel, index)
-    wc = get_dwt(channel);
-
-    for i=1:length(wc)
-     signal_Pow = wc{i}.^2;  % Compute the second power of signal points
-     total_energy = sum(signal_Pow);
-     dwtEnergy{i} = total_energy;
+function out = willison_amp(channel)
+    count=0;
+    N=size(channel,2);
+    for ii=1:N-1
+        if (channel(ii)-channel(ii+1)) >= 10e-3
+            count=count+1;
+        end
     end
-    max_ = max(cell2mat(dwtEnergy));
-    mean_energy = mean(cell2mat(dwtEnergy));
-
-    out_values = [ max_ , mean_energy];
-    out = out_values(index);
+    out = count;
 end
