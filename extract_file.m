@@ -18,7 +18,10 @@ function [] = extract_file(in_filename, out_filename)
         @(channel) mean_dwt(channel, 2),
         @(channel) mean_dwt(channel, 3),
         @(channel) dwt_energy(channel, 1),
-        @(channel) dwt_energy(channel, 2)
+        @(channel) dwt_energy(channel, 2),
+		@(channel, ss, si) getDASDV(channel),
+		@(channel, ss, si) getTM3(channel),
+		@(channel, ss, si) getAAC(channel)
     };
     feature_data = extract_features(data, features, num_samples, num_channels);
     
@@ -109,4 +112,32 @@ function out = dwt_energy(channel, index)
 
     out_values = [ max_ , mean_energy];
     out = out_values(index);
+end
+
+function DASDV = getDASDV(channel)
+    %% Difference Absolute Standard Deviation
+    N = length(channel);
+    sum_total = 0;
+    for i =1:N-1
+         sum_total = sum_total + ( channel(i+1) - channel(i) ).^2;
+    end
+    DASDV = sqrt ( (1 / (N - 1)) * sum_total );
+end
+
+function TM3 = getTM3(channel)
+    %% TM3 :: 3rd Temporal Moment
+    N = length(channel);
+    channelcubed = channel.^3;
+    TM3 = (1/N)* sum(channelcubed);
+end
+
+function AAC = getAAC(channel)
+    %% AAC :: Average Amplitude Change
+    N = length(channel);
+    s_total = 0;
+    for i =1:N-1
+         s_total = s_total + abs( channel(i+1) - channel(i) );
+    end
+
+    AAC = (1/N) * s_total;
 end
