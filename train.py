@@ -6,6 +6,7 @@ from sklearn.metrics import precision_score, recall_score, accuracy_score
 from collections import defaultdict
 import h5py
 from imblearn.over_sampling import SMOTE
+import pickle
 
 to_exclude = {
 	# patient, vowel, sample
@@ -24,8 +25,56 @@ to_exclude = {
 	57: 'all'
 }
 
+classes = np.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0])
+
+def separate_data(data_file, feature_data, to_exclude, left_out, num_patients, num_vowels, num_features):
+	iter_data = np.array([]).reshape(0, num_features)
+	test_data = np.array([]).reshape(0, num_features)
+	iter_classes = np.array([]).reshape(0, 1)
+	test_classes = np.array([]).reshape(0, 1)
+	
+	for i in range(num_patients):
+		if i not in to_exclude or to_exclude[i] != 'all':
+			for vowel in range(num_vowels):
+				if i not in to_exclude or vowel not in to_exclude[i] or to_exclude[i][vowel] != 'all':
+					if i in to_exclude and vowel in to_exclude[i]:
+						to_remove = to_exclude[i][vowel]
+					else:
+						to_remove = []
+
+					current_data = np.delete(np.transpose(data_file[feature_data[vowel, i]]), to_remove, axis=0)
+					current_classes = np.delete(np.full((data_file[feature_data[vowel, i]].shape[1], 1), classes[i]), to_remove, axis=0)
+					if not i == left_out:
+						iter_data = np.concatenate((iter_data, current_data))
+						iter_classes = np.concatenate((iter_classes, current_classes))
+					else:
+						test_data = np.concatenate((test_data, current_data))
+						test_classes = np.concatenate((test_classes, current_classes))
+						
+	# remove infinite values (from dividing by 0)
+	iter_data[~np.isfinite(iter_data)] = 0
+	test_data[~np.isfinite(test_data)] = 0
+	
+	return iter_data, iter_classes, test_data, test_classes
+	
+	
+def train_model(iter_data, iter_classes):
+	X = iter_data
+	y = iter_classes.ravel()
+
+	# SMOTE
+	rebalancing = SMOTE()
+	X_res, y_res = rebalancing.fit_sample(X, y)
+	
+	# train classifier
+	classifier = SVC()
+	classifier.fit(X_res, y_res)
+	
+	return classifier
+	
+
 def train(file_name, variable_name):
-	classes = np.array([0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1, 0, 1, 1, 1, 0, 1, 0, 0])
+
 
 	data_file = h5py.File(file_name, 'r')
 	feature_data = data_file[variable_name]
@@ -38,6 +87,10 @@ def train(file_name, variable_name):
 	metrics = defaultdict(list)
 	avg_metrics = defaultdict(int)
 
+	# train and save full model
+	iter_data, iter_classes, test_data, test_classes = separate_data(data_file, feature_data, to_exclude, -1, num_patients, num_vowels, num_features)
+	classifier = train_model(iter_data, iter_classes)
+	pickle.dump(classifier, open("model.pickle", 'wb'))
 
 	num_trials = 0
 	num_pos_trials = 0
@@ -46,44 +99,9 @@ def train(file_name, variable_name):
 	for left_out in range(num_patients):
 		if not left_out in to_exclude or to_exclude[left_out] != 'all':
 			print("PROGRESS", left_out)
-
-			iter_data = np.array([]).reshape(0, num_features)
-			test_data = np.array([]).reshape(0, num_features)
-			iter_classes = np.array([]).reshape(0, 1)
-			test_classes = np.array([]).reshape(0, 1)
-
-			for i in range(num_patients):
-				if i not in to_exclude or to_exclude[i] != 'all':
-					for vowel in range(num_vowels):
-						if i not in to_exclude or vowel not in to_exclude[i] or to_exclude[i][vowel] != 'all':
-							if i in to_exclude and vowel in to_exclude[i]:
-								to_remove = to_exclude[i][vowel]
-							else:
-								to_remove = []
-
-							current_data = np.delete(np.transpose(data_file[feature_data[vowel, i]]), to_remove, axis=0)
-							current_classes = np.delete(np.full((data_file[feature_data[vowel, i]].shape[1], 1), classes[i]), to_remove, axis=0)
-							if not i == left_out:
-								iter_data = np.concatenate((iter_data, current_data))
-								iter_classes = np.concatenate((iter_classes, current_classes))
-							else:
-								test_data = np.concatenate((test_data, current_data))
-								test_classes = np.concatenate((test_classes, current_classes))
-
-			# remove infinite values (from dividing by 0)
-			iter_data[~np.isfinite(iter_data)] = 0
-			test_data[~np.isfinite(test_data)] = 0
 			
-			X = iter_data
-			y = iter_classes.ravel()
-
-			# SMOTE
-			rebalancing = SMOTE()
-			X_res, y_res = rebalancing.fit_resample(X, y)
-
-			# train classifier
-			classifier = SVC(gamma='scale')
-			classifier.fit(X_res, y_res)
+			iter_data, iter_classes, test_data, test_classes = separate_data(data_file, feature_data, to_exclude, left_out, num_patients, num_vowels, num_features)
+			classifier = train_model(iter_data, test_data)
 			predicted_classes = classifier.predict(test_data)
 
 			# evaluate metrics
