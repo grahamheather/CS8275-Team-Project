@@ -111,6 +111,6 @@ def train(file_name, variable_name):
 #metrics, avg_metrics = train('all_features', 'feature_data')
 #metrics, avg_metrics = train('featuresV1.mat', 'feature_data')
 #metrics, avg_metrics = train('featuresV2.mat', 'feature_data')
-metrics, avg_metrics = train('featuresV4.mat', 'feature_data')
+metrics, avg_metrics = train('featuresV6.mat', 'feature_data')
 print(metrics)
 print(avg_metrics)
