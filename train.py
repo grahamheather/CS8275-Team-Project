@@ -67,7 +67,7 @@ def train_model(iter_data, iter_classes):
 	X_res, y_res = rebalancing.fit_sample(X, y)
 	
 	# train classifier
-	classifier = SVC()
+	classifier = SVC(gamma='scale')
 	classifier.fit(X_res, y_res)
 	
 	return classifier
@@ -101,7 +101,7 @@ def train(file_name, variable_name):
 			print("PROGRESS", left_out)
 			
 			iter_data, iter_classes, test_data, test_classes = separate_data(data_file, feature_data, to_exclude, left_out, num_patients, num_vowels, num_features)
-			classifier = train_model(iter_data, test_data)
+			classifier = train_model(iter_data, iter_classes)
 			predicted_classes = classifier.predict(test_data)
 
 			# evaluate metrics
@@ -126,9 +126,6 @@ def train(file_name, variable_name):
 
 	return (metrics, avg_metrics)
 
-#metrics, avg_metrics = train('all_features', 'feature_data')
-#metrics, avg_metrics = train('featuresV1.mat', 'feature_data')
-#metrics, avg_metrics = train('featuresV2.mat', 'feature_data')
-metrics, avg_metrics = train('featuresV4.mat', 'feature_data')
+metrics, avg_metrics = train('featuresV6.mat', 'feature_data')
 print(metrics)
 print(avg_metrics)
