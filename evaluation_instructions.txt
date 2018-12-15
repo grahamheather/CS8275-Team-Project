@@ -1,0 +1,2 @@
+cmd /k extract_file.exe "FILENAME_IN" "FILENAME_OUT.MAT"
+python eval_model.py model.pickle "FILENAME_OUT.MAT" "FILENAME OUT"
