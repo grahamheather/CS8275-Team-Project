@@ -1,7 +1,7 @@
 # CS8275-Team-Project
 ## Gbenga Omotara, Nuerzati Resuli, and Heather Graham
 
-The data, provided by Dr. DeSouza, is recordings of the vowels a, i, and u pronounced by various speakers.
+The data, provided by Dr. DeSouza, is recordings of the vowels a, i, and u pronounced by various speakers.  Precisely, the data contains 4 channels of sEMG readings and 2 channels of audio.
 
 The goal of the project was to classify each of these recordings based on whether or not it is indicative of vocal fatigue.
 
